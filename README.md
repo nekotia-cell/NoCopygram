@@ -1,0 +1,2 @@
+# NoCopygram
+net
