@@ -19,12 +19,19 @@ from utils.userhelpers import ensure_user_exists
 
 # In-memory storage for active roulette games per chat
 game_instances: dict = {}
+game_locks: dict = {}
 
 
 def get_game_instance(chat_id: int) -> RouletteGame:
     if chat_id not in game_instances:
         game_instances[chat_id] = RouletteGame()
     return game_instances[chat_id]
+
+
+def get_game_lock(chat_id: int) -> asyncio.Lock:
+    if chat_id not in game_locks:
+        game_locks[chat_id] = asyncio.Lock()
+    return game_locks[chat_id]
 
 
 @dp.message(F.text.lower() == "го")
@@ -40,9 +47,11 @@ async def handle_go_command(message: Message):
     if UserDB.is_blocked(user_id):
         return
 
-    if not game.bets:
-        await message.reply("Никто не сделал ставок.")
-        return
+    async with get_game_lock(chat_id):
+        if not game.bets:
+            await message.reply("Никто не сделал ставок.")
+            return
+        bets = game.take_bets()
 
     gif_message = await message.answer_animation(ROULETTE_GIF)
     await asyncio.sleep(3)
@@ -51,6 +60,8 @@ async def handle_go_command(message: Message):
         await bot.delete_message(chat_id, gif_message.message_id)
     except Exception as e:
         print(f"Ошибка при удалении гифки: {e}")
+        for bet in bets:
+            UserDB.update_balance(bet['user_id'], bet['stake'])
         await message.reply("Не удалось удалить гифку. У меня нет прав администратора.")
         return
 
@@ -62,7 +73,7 @@ async def handle_go_command(message: Message):
     winning_details = ""
     winners_found = False
 
-    for bet in game.bets:
+    for bet in bets:
         user_id = bet['user_id']
         stake = bet['stake']
         bet_value = bet['bet']
@@ -106,7 +117,6 @@ async def handle_go_command(message: Message):
     result_message += "\n" + winning_details
     await message.answer(result_message, parse_mode=ParseMode.HTML)
 
-    game.clear_bets()
 
 
 @dp.message(F.text.lower() == "лог")
@@ -177,7 +187,7 @@ async def handle_roulette_bets(message: Message):
                     if balance >= stake:
                         bet_value = parse_bet(bet_str, user_id, {})
 
-                        if bet_value:
+                        if bet_value is not None:
                             if bet_value == 'red':
                                 if message_red_black['red'] or not game.can_place_color_bet(user_id, 'red'):
                                     bet_message_lines.append("Вы уже сделали ставку на 🔴.")
@@ -189,6 +199,9 @@ async def handle_roulette_bets(message: Message):
                                     continue
                                 message_red_black['black'] = True
 
+                            if not UserDB.debit(user_id, stake):
+                                bet_message_lines.append("Недостаточно средств для этой ставки")
+                                break
                             game.add_bet(user_id, stake, bet_value)
 
                             if bet_value == 'red':
@@ -216,9 +229,6 @@ async def handle_roulette_bets(message: Message):
                     f"{user_link}, Ставки приняты:\n{accepted_bets_message}",
                     parse_mode=ParseMode.HTML
                 )
-
-                if amount_deducted > 0:
-                    UserDB.update_balance(user_id, -amount_deducted)
 
     except ValueError:
         await message.reply(f"{user_link}, Ошибка в формате ставки.", parse_mode=ParseMode.HTML)

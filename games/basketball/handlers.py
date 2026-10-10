@@ -45,7 +45,9 @@ async def handle_basketball_game(message: Message):
             await message.reply(f"{user_link}, Недостаточно Кото-грамм на балансе.", parse_mode=ParseMode.HTML)
             return
 
-        UserDB.update_balance(user_id, -stake)
+        if not UserDB.debit(user_id, stake):
+            await message.reply(f"{user_link}, Недостаточно Кото-грамм на балансе.", parse_mode=ParseMode.HTML)
+            return
 
         dice_message = await message.answer_dice(emoji='🏀')
         dice_value = dice_message.dice.value

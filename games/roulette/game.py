@@ -26,6 +26,12 @@ class RouletteGame:
         self.bets = []
         self.user_red_black = {}
 
+    def take_bets(self) -> List[Dict]:
+        """Detach the current round so it cannot be processed twice."""
+        bets = self.bets
+        self.clear_bets()
+        return bets
+
     def get_user_bets(self, user_id: int) -> List[Dict]:
         return [bet for bet in self.bets if bet['user_id'] == user_id]
 

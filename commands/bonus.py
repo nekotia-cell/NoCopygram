@@ -56,8 +56,12 @@ async def handle_bonus_command(message: Message):
         else:
             bonus_amount = random.randint(300, 600)
 
-        UserDB.update_balance(user_id, bonus_amount)
-        UserDB.set_bonus_timer(user_id, current_time)
+        if not UserDB.claim_bonus(user_id, bonus_amount, current_time, 24 * 3600):
+            await message.reply(
+                f"{vip_prefix}{user_link}, бонус уже был получен другим запросом или еще недоступен.",
+                parse_mode=ParseMode.HTML,
+            )
+            return
         declension = gram_declension(bonus_amount)
 
         await message.reply(

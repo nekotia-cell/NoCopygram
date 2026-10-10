@@ -40,7 +40,7 @@ async def handle_clan_promote_command(message: Message):
 
         target_user_id = int(message.text.split()[2])
 
-        if ClanMemberDB.get_role(target_user_id) is None:
+        if ClanMemberDB.get_role(target_user_id, clan_name) is None:
             await message.reply(f"{user_link}, Этот пользователь не состоит в вашем клане.", parse_mode=ParseMode.HTML)
             return
 
@@ -85,7 +85,7 @@ async def handle_clan_demote_command(message: Message):
 
         target_user_id = int(message.text.split()[2])
 
-        if ClanMemberDB.get_role(target_user_id) is None:
+        if ClanMemberDB.get_role(target_user_id, clan_name) is None:
             await message.reply(f"{user_link}, Этот пользователь не состоит в вашем клане.", parse_mode=ParseMode.HTML)
             return
 
@@ -163,8 +163,8 @@ async def handle_clan_delete_command(message: Message):
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text='Удалить клан', callback_data=f'delete_clan:{clan_name}'),
-            InlineKeyboardButton(text='Отмена', callback_data='cancel_delete')
+            InlineKeyboardButton(text='Удалить клан', callback_data=f'delete_clan:{clan_name}:{user_id}'),
+            InlineKeyboardButton(text='Отмена', callback_data=f'cancel_delete:{user_id}')
         ]
     ])
 
@@ -173,15 +173,32 @@ async def handle_clan_delete_command(message: Message):
 
 @dp.callback_query(F.data.startswith('delete_clan'))
 async def clan_delete(call: CallbackQuery):
-    clan_name = call.data[len('delete_clan:'):]
+    try:
+        clan_name, owner_id_text = call.data[len('delete_clan:'):].rsplit(':', 1)
+        owner_id = int(owner_id_text)
+    except (ValueError, IndexError):
+        await call.answer("Некорректное подтверждение.")
+        return
+    clan_data = ClanDB.get(clan_name)
+    if owner_id != call.from_user.id or not clan_data or clan_data['creator_id'] != call.from_user.id:
+        await call.answer("❌ У вас нет права удалить этот клан.")
+        return
     ClanDB.delete(clan_name)
 
     await call.answer("Клан удален.")
     await call.message.edit_text("Клан удален.", reply_markup=None)
 
 
-@dp.callback_query(F.data == 'cancel_delete')
+@dp.callback_query(F.data.startswith('cancel_delete:'))
 async def clan_cancel(call: CallbackQuery):
+    try:
+        owner_id = int(call.data.split(':', 1)[1])
+    except (ValueError, IndexError):
+        await call.answer("Некорректное действие.")
+        return
+    if owner_id != call.from_user.id:
+        await call.answer("❌ Это не ваша кнопка.")
+        return
     await call.answer("Отменено.")
     await call.message.edit_text("Отменено.", reply_markup=None)
 
@@ -296,7 +313,7 @@ async def handle_clan_kick_command(message: Message):
 
         kicked_user_id = int(message.text.split()[2])
 
-        if ClanMemberDB.get_role(kicked_user_id) is None:
+        if ClanMemberDB.get_role(kicked_user_id, clan_name) is None:
             await message.reply(f"{user_link}, Этот пользователь не состоит в вашем клане.", parse_mode=ParseMode.HTML)
             return
 
@@ -445,11 +462,13 @@ async def handle_create_clan_command(message: Message):
             await message.reply(f"{user_link}, Название клана содержит запрещенные символы (@ : / \\ \").", parse_mode=ParseMode.HTML)
             return
 
-        UserDB.update_balance(user_id, -CLAN_CREATION_COST)
+        if not UserDB.debit(user_id, CLAN_CREATION_COST):
+            await message.reply(f"{user_link}, Недостаточно Кото-грамм для создания клана.", parse_mode=ParseMode.HTML)
+            return
 
         first_name = message.from_user.first_name if message.from_user.first_name else "Нет имени"
         ClanDB.create(clan_name, user_id, first_name)
-        ClanMemberDB.add(user_id, clan_name, "глава")
+        ClanMemberDB.add(user_id, clan_name, "глава", increment_count=False)
         UserDB.set_clan(user_id, clan_name)
 
         await message.reply(
@@ -522,7 +541,9 @@ async def handle_clan_treasury_command(message: Message):
             await message.reply(f"{user_link}, Недостаточно Кото-грамм на балансе.", parse_mode=ParseMode.HTML)
             return
 
-        UserDB.update_balance(user_id, -amount)
+        if not UserDB.debit(user_id, amount):
+            await message.reply(f"{user_link}, Недостаточно Кото-грамм на балансе.", parse_mode=ParseMode.HTML)
+            return
         ClanDB.update_treasury(clan_name, amount)
 
         await message.reply(

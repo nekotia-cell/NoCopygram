@@ -34,11 +34,8 @@ def buy_vip(user_id: int) -> bool:
     if is_vip(user_id):
         return False
 
-    balance = UserDB.get_balance(user_id)
-    if balance < VIP_PRICE:
+    if not UserDB.debit(user_id, VIP_PRICE):
         return False
-
-    UserDB.update_balance(user_id, -VIP_PRICE)
     UserDB.set_vip(user_id, time.time() + VIP_DURATION)
     return True
 

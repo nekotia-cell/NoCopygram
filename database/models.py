@@ -30,6 +30,52 @@ class UserDB:
             cursor.execute('''
                 UPDATE users SET balance = balance + ? WHERE user_id = ?
             ''', (amount, user_id))
+
+    @staticmethod
+    def transfer(sender_id: int, recipient_id: int, amount: int) -> bool:
+        """Atomically move a positive amount between two users."""
+        if amount <= 0 or sender_id == recipient_id:
+            return False
+        with get_db() as cursor:
+            cursor.execute('SELECT 1 FROM users WHERE user_id = ?', (recipient_id,))
+            if cursor.fetchone() is None:
+                return False
+            cursor.execute(
+                'UPDATE users SET balance = balance - ? WHERE user_id = ? AND balance >= ?',
+                (amount, sender_id, amount),
+            )
+            if cursor.rowcount != 1:
+                return False
+            cursor.execute(
+                'UPDATE users SET balance = balance + ? WHERE user_id = ?',
+                (amount, recipient_id),
+            )
+            return cursor.rowcount == 1
+
+    @staticmethod
+    def debit(user_id: int, amount: int) -> bool:
+        if amount <= 0:
+            return False
+        with get_db() as cursor:
+            cursor.execute(
+                'UPDATE users SET balance = balance - ? WHERE user_id = ? AND balance >= ?',
+                (amount, user_id, amount),
+            )
+            return cursor.rowcount == 1
+
+    @staticmethod
+    def claim_bonus(user_id: int, amount: int, now: float, cooldown: float) -> bool:
+        """Atomically claim a bonus only if the cooldown has elapsed."""
+        if amount <= 0:
+            return False
+        with get_db() as cursor:
+            cursor.execute(
+                '''UPDATE users
+                   SET balance = balance + ?, bonus_timer = ?
+                   WHERE user_id = ? AND bonus_timer <= ?''',
+                (amount, now, user_id, now - cooldown),
+            )
+            return cursor.rowcount == 1
     
     @staticmethod
     def set_balance(user_id: int, balance: int):
@@ -160,20 +206,30 @@ class ClanDB:
 # Clan members operations
 class ClanMemberDB:
     @staticmethod
-    def add(user_id: int, clan_name: str, role: str = 'участник'):
+    def add(user_id: int, clan_name: str, role: str = 'участник', increment_count: bool = True):
         with get_db() as cursor:
+            cursor.execute('SELECT 1 FROM clan_members WHERE user_id = ?', (user_id,))
+            if cursor.fetchone():
+                return False
             cursor.execute('''
-                INSERT OR REPLACE INTO clan_members (user_id, clan_name, role)
+                INSERT INTO clan_members (user_id, clan_name, role)
                 VALUES (?, ?, ?)
             ''', (user_id, clan_name, role))
-            cursor.execute('''
-                UPDATE clans SET members_count = members_count + 1 WHERE name = ?
-            ''', (clan_name,))
+            if increment_count:
+                cursor.execute('''
+                    UPDATE clans SET members_count = members_count + 1 WHERE name = ?
+                ''', (clan_name,))
+            return True
     
     @staticmethod
-    def remove(user_id: int):
+    def remove(user_id: int, clan_name: Optional[str] = None):
         with get_db() as cursor:
-            cursor.execute('SELECT clan_name FROM clan_members WHERE user_id = ?', (user_id,))
+            query = 'SELECT clan_name FROM clan_members WHERE user_id = ?'
+            params = [user_id]
+            if clan_name is not None:
+                query += ' AND clan_name = ?'
+                params.append(clan_name)
+            cursor.execute(query, params)
             row = cursor.fetchone()
             if row:
                 clan_name = row['clan_name']
@@ -181,19 +237,33 @@ class ClanMemberDB:
                 cursor.execute('''
                     UPDATE clans SET members_count = members_count - 1 WHERE name = ?
                 ''', (clan_name,))
+                return True
+            return False
     
     @staticmethod
-    def get_role(user_id: int) -> Optional[str]:
+    def get_role(user_id: int, clan_name: Optional[str] = None) -> Optional[str]:
         with get_db() as cursor:
-            cursor.execute('SELECT role FROM clan_members WHERE user_id = ?', (user_id,))
+            if clan_name is None:
+                cursor.execute('SELECT role FROM clan_members WHERE user_id = ?', (user_id,))
+            else:
+                cursor.execute(
+                    'SELECT role FROM clan_members WHERE user_id = ? AND clan_name = ?',
+                    (user_id, clan_name),
+                )
             row = cursor.fetchone()
             return row['role'] if row else None
     
     @staticmethod
-    def update_role(user_id: int, role: str):
+    def update_role(user_id: int, role: str, clan_name: Optional[str] = None):
         with get_db() as cursor:
-            cursor.execute('UPDATE clan_members SET role = ? WHERE user_id = ?', 
-                         (role, user_id))
+            if clan_name is None:
+                cursor.execute('UPDATE clan_members SET role = ? WHERE user_id = ?',
+                               (role, user_id))
+            else:
+                cursor.execute(
+                    'UPDATE clan_members SET role = ? WHERE user_id = ? AND clan_name = ?',
+                    (role, user_id, clan_name),
+                )
     
     @staticmethod
     def get_members(clan_name: str) -> List[Dict]:
@@ -244,6 +314,7 @@ class PromoDB:
     @staticmethod
     def use(code: str, user_id: int) -> bool:
         with get_db() as cursor:
+            cursor.execute('BEGIN IMMEDIATE')
             cursor.execute('SELECT * FROM promo_codes WHERE code = ?', (code,))
             row = cursor.fetchone()
             if not row:
@@ -260,9 +331,9 @@ class PromoDB:
             cursor.execute('''
                 UPDATE promo_codes 
                 SET activations = activations - 1, used_by = ?
-                WHERE code = ?
+                WHERE code = ? AND activations > 0
             ''', (json.dumps(used_by), code))
-            return True
+            return cursor.rowcount == 1
 
     @staticmethod
     def get_by_code_case_insensitive(code: str) -> Optional[Dict]:
@@ -338,3 +409,31 @@ class ActiveGameDB:
             cursor.execute('''
                 UPDATE active_games SET last_action_time = ? WHERE user_id = ?
             ''', (time.time(), user_id))
+
+    @staticmethod
+    def settle(user_id: int, amount: int) -> bool:
+        """Delete an active game and pay exactly once in one transaction."""
+        if amount < 0:
+            return False
+        with get_db() as cursor:
+            cursor.execute('DELETE FROM active_games WHERE user_id = ?', (user_id,))
+            if cursor.rowcount != 1:
+                return False
+            if amount:
+                cursor.execute('UPDATE users SET balance = balance + ? WHERE user_id = ?',
+                               (amount, user_id))
+                return cursor.rowcount == 1
+            return True
+
+    @staticmethod
+    def expire_and_refund(user_id: int, stake: int) -> bool:
+        """Remove an expired game and refund its stake exactly once."""
+        if stake < 0:
+            return False
+        with get_db() as cursor:
+            cursor.execute('DELETE FROM active_games WHERE user_id = ?', (user_id,))
+            if cursor.rowcount != 1:
+                return False
+            cursor.execute('UPDATE users SET balance = balance + ? WHERE user_id = ?',
+                           (stake, user_id))
+            return cursor.rowcount == 1

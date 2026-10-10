@@ -54,7 +54,9 @@ async def handle_crash_command(message: Message):
             await message.reply(f"{user_link}, Недостаточно Кото-грам на балансе", parse_mode=ParseMode.HTML)
             return
 
-        UserDB.update_balance(user_id, -stake)
+        if not UserDB.debit(user_id, stake):
+            await message.reply(f"{user_link}, Недостаточно Кото-грамм на балансе", parse_mode=ParseMode.HTML)
+            return
 
     except ValueError:
         await message.reply("Неверный формат команды. Используйте «краш <ставка> <множитель>»")

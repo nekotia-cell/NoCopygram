@@ -1,4 +1,4 @@
-из папки games/mines
+# Game logic for the mines game.
 
 import random
 import math
@@ -46,6 +46,8 @@ class MinesGame:
     
     def reveal(self, position: int) -> bool:
         """Returns True if safe, False if mine"""
+        if not 0 <= position < 25:
+            raise ValueError("position must be between 0 and 24")
         self.revealed.add(position)
         self.last_action_time = time.time()
         return position not in self.mine_positions

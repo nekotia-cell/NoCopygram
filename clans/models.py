@@ -32,37 +32,38 @@ class Clan:
     
     def add_member(self, user_id: int) -> bool:
         if ClanMemberDB.count(self.name) < CLAN_MAX_MEMBERS:
-            ClanMemberDB.add(user_id, self.name, "участник")
+            if not ClanMemberDB.add(user_id, self.name, "участник"):
+                return False
             from database.models import UserDB
             UserDB.set_clan(user_id, self.name)
             return True
         return False
-    
+
     def remove_member(self, user_id: int):
-        ClanMemberDB.remove(user_id)
-        from database.models import UserDB
-        UserDB.set_clan(user_id, None)
-    
+        if ClanMemberDB.remove(user_id, self.name):
+            from database.models import UserDB
+            UserDB.set_clan(user_id, None)
+
     def get_member_role(self, user_id: int) -> Optional[str]:
-        return ClanMemberDB.get_role(user_id)
+        return ClanMemberDB.get_role(user_id, self.name)
     
     def promote_member(self, user_id: int) -> bool:
         role = self.get_member_role(user_id)
         if role == "участник":
-            ClanMemberDB.update_role(user_id, "модератор")
+            ClanMemberDB.update_role(user_id, "модератор", self.name)
             return True
         elif role == "модератор":
-            ClanMemberDB.update_role(user_id, "заместитель")
+            ClanMemberDB.update_role(user_id, "заместитель", self.name)
             return True
         return False
     
     def demote_member(self, user_id: int) -> bool:
         role = self.get_member_role(user_id)
         if role == "заместитель":
-            ClanMemberDB.update_role(user_id, "модератор")
+            ClanMemberDB.update_role(user_id, "модератор", self.name)
             return True
         elif role == "модератор":
-            ClanMemberDB.update_role(user_id, "участник")
+            ClanMemberDB.update_role(user_id, "участник", self.name)
             return True
         return False
     

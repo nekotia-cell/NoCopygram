@@ -10,6 +10,9 @@ from config import ADMIN_ID
 async def handle_admin_command(message: Message):
     try:
         amount = int(message.text.split()[1])
+        if amount <= 0:
+            await message.reply("Количество должно быть положительным числом.")
+            return
         reply_to_user_id = message.reply_to_message.from_user.id
 
         UserDB.update_balance(reply_to_user_id, amount)
@@ -22,11 +25,12 @@ async def handle_admin_command(message: Message):
 async def handle_take_command(message: Message):
     try:
         amount = int(message.text.split()[1])
+        if amount <= 0:
+            await message.reply("Количество должно быть положительным числом.")
+            return
         reply_to_user_id = message.reply_to_message.from_user.id
 
-        balance = UserDB.get_balance(reply_to_user_id)
-        if balance >= amount:
-            UserDB.update_balance(reply_to_user_id, -amount)
+        if UserDB.debit(reply_to_user_id, amount):
             await message.reply(f"Забрано {amount} Кото-грамм у пользователя @{message.reply_to_message.from_user.username}")
         else:
             await message.reply(f"У пользователя @{message.reply_to_message.from_user.username} недостаточно средств.")

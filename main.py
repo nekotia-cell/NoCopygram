@@ -49,8 +49,9 @@ async def check_game_timeouts():
                 user_id = game_data['user_id']
                 game_dict = game_data['game_data']
                 
-                # Refund
-                UserDB.update_balance(user_id, game_dict['stake'])
+                # Atomically remove the game and refund it exactly once.
+                if not ActiveGameDB.expire_and_refund(user_id, game_dict['stake']):
+                    continue
                 
                 # Try to edit message
                 try:
@@ -65,8 +66,6 @@ async def check_game_timeouts():
                 except Exception as e:
                     print(f"Error editing message: {e}")
                 
-                # Delete from DB
-                ActiveGameDB.delete(user_id)
 
 
 async def update_clan_ratings():

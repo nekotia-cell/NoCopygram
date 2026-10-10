@@ -29,6 +29,10 @@ async def handle_mines_command(message: Message):
     if UserDB.is_blocked(user_id):
         return
 
+    if ActiveGameDB.get(user_id):
+        await message.reply("У вас уже есть активная игра. Завершите ее перед началом новой.")
+        return
+
     try:
         _, stake_str = message.text.split(" ", 1)
         stake = int(stake_str)
@@ -47,7 +51,9 @@ async def handle_mines_command(message: Message):
             await message.reply(f"{user_link}, Недостаточно Кото-грамов на балансе", parse_mode=ParseMode.HTML)
             return
 
-        UserDB.update_balance(user_id, -stake)
+        if not UserDB.debit(user_id, stake):
+            await message.reply(f"{user_link}, Недостаточно Кото-грамм на балансе.", parse_mode=ParseMode.HTML)
+            return
 
     except ValueError:
         await message.reply("Неверный формат команды. Используйте 'мины <ставка>'")
@@ -80,10 +86,10 @@ async def handle_mines_callback(call: CallbackQuery):
         button_index = int(button_index_str)
         user_id_from_callback = int(user_id_str)
 
-        if user_id != user_id_from_callback:
+        if user_id != user_id_from_callback or not 0 <= button_index < 25:
             await call.answer("❌ Это не ваша игра!")
             return
-    except ValueError:
+    except (ValueError, IndexError):
         print(f"Error parsing callback {call.data}")
         return
 
@@ -99,9 +105,9 @@ async def handle_mines_callback(call: CallbackQuery):
         return
 
     is_safe = game.reveal(button_index)
-    ActiveGameDB.save(user_id, 'mines', game.to_dict())
 
     if not is_safe:
+        ActiveGameDB.delete(user_id)
         revealed = set(game.mine_positions) | game.revealed
         keyboard = generate_mines_keyboard(user_id, game.mine_positions, revealed)
         await call.message.edit_reply_markup(reply_markup=keyboard)
@@ -128,16 +134,26 @@ async def handle_mines_callback(call: CallbackQuery):
             await call.answer("Безопасно!")
         else:
             winnings = game.calculate_winnings()
-            UserDB.update_balance(user_id, winnings)
+            if not ActiveGameDB.settle(user_id, winnings):
+                await call.answer("Игра уже завершена другим запросом.")
+                return
 
             end_message = f"Игра закончена!\nВы выиграли: {winnings} Кото-грамм"
             await call.message.edit_text(end_message, reply_markup=None, parse_mode=ParseMode.HTML)
-            ActiveGameDB.delete(user_id)
 
 
 @dp.callback_query(F.data.startswith("claim_"))
 async def handle_claim_callback(call: CallbackQuery):
     user_id = call.from_user.id
+
+    try:
+        owner_id = int(call.data.split("_", 1)[1])
+    except (ValueError, IndexError):
+        await call.answer("Некорректная кнопка.")
+        return
+    if owner_id != user_id:
+        await call.answer("❌ Это не ваша игра!")
+        return
 
     game_data = ActiveGameDB.get(user_id)
     if not game_data or game_data['game_type'] != 'mines':
@@ -147,12 +163,13 @@ async def handle_claim_callback(call: CallbackQuery):
     game = MinesGame.from_dict(user_id, game_data['game_data'])
     winnings = game.calculate_winnings()
 
-    UserDB.update_balance(user_id, winnings)
+    if not ActiveGameDB.settle(user_id, winnings):
+        await call.answer("Игра уже завершена другим запросом.")
+        return
 
     end_message = f"Игра закончена!\nВы выиграли: {winnings} Кото-грамм"
     await call.message.edit_text(end_message, reply_markup=None)
 
-    ActiveGameDB.delete(user_id)
     await call.answer("Вы забрали выигрыш!")
 
 
@@ -160,14 +177,24 @@ async def handle_claim_callback(call: CallbackQuery):
 async def handle_cancel_callback(call: CallbackQuery):
     user_id = call.from_user.id
 
+    try:
+        owner_id = int(call.data.split("_", 1)[1])
+    except (ValueError, IndexError):
+        await call.answer("Некорректная кнопка.")
+        return
+    if owner_id != user_id:
+        await call.answer("❌ Это не ваша игра!")
+        return
+
     game_data = ActiveGameDB.get(user_id)
     if not game_data or game_data['game_type'] != 'mines':
         await call.answer("Игра не найдена.")
         return
 
     game = MinesGame.from_dict(user_id, game_data['game_data'])
-    game.refund()
+    if not ActiveGameDB.expire_and_refund(user_id, game.stake):
+        await call.answer("Игра уже завершена другим запросом.")
+        return
 
     await call.message.delete()
-    ActiveGameDB.delete(user_id)
     await call.answer("Игра отменена.")

@@ -14,8 +14,6 @@ from utils.userhelpers import ensure_user_exists
 async def handle_transfer_command(message: Message):
     ensure_user_exists(message)
     user_id = message.from_user.id
-    chat_id = message.chat.id
-
     if message.chat.type == 'private':
         return
 
@@ -27,21 +25,21 @@ async def handle_transfer_command(message: Message):
         sender_id = message.from_user.id
         recipient_id = message.reply_to_message.from_user.id
 
-        if sender_id == recipient_id:
-            await message.reply("Нельзя перевести самому себе.")
+        if amount <= 0:
+            await message.reply("Сумма перевода должна быть положительным числом.")
             return
 
-        sender_balance = UserDB.get_balance(sender_id)
-        if sender_balance < amount:
-            await message.reply("У вас недостаточно средств.")
+        if sender_id == recipient_id:
+            await message.reply("Нельзя перевести самому себе.")
             return
 
         if UserDB.get(recipient_id) is None:
             UserDB.create(recipient_id, message.reply_to_message.from_user.first_name, 
                          message.reply_to_message.from_user.last_name)
 
-        UserDB.update_balance(sender_id, -amount)
-        UserDB.update_balance(recipient_id, amount)
+        if not UserDB.transfer(sender_id, recipient_id, amount):
+            await message.reply("У вас недостаточно средств или получатель недоступен.")
+            return
 
         sender_link = hlink(
             f"{message.from_user.first_name} {message.from_user.last_name or ''}".strip(),

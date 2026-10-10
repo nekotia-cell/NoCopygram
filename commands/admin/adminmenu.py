@@ -4,7 +4,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from core.dispatcher import dp
-from config import ADMIN_ID
+from config import ADMIN_ID, DB_PATH
 from database.models import PromoDB
 
 
@@ -265,7 +265,7 @@ async def handle_backup_button(message: Message):
     if message.from_user.id != ADMIN_ID:
         return
     
-    db_path = "players.db"
+    db_path = DB_PATH
     
     if not os.path.exists(db_path):
         await message.answer("❌ Файл базы данных не найден.", reply_markup=get_main_admin_keyboard())
