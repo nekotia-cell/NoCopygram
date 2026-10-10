@@ -552,4 +552,7 @@ async def handle_clan_treasury_command(message: Message):
         )
 
     except (ValueError, IndexError):
-        await message.reply(f"{user_link}, Неверный формат команды. Используйте 'клан казна <сумма>'.", parse_mode=ParseMode.HTML)
+        await message.reply(
+            f"{user_link}, Неверный формат команды. Используйте «клан казна сумма».",
+            parse_mode=ParseMode.HTML,
+        )
