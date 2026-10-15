@@ -14,7 +14,7 @@ async def handle_block_command(message: Message):
             UserDB.set_blocked(user_id_to_block, True)
             await message.reply(f"Пользователь с ID {user_id_to_block} заблокирован.")
         except (IndexError, ValueError):
-            await message.reply("Неверный формат команды. Используйте /stopb <user_id>")
+            await message.reply("Неверный формат команды. Используйте /stopb user_id")
     else:
         await message.reply("У вас нет прав для выполнения этой команды.")
 
@@ -27,6 +27,6 @@ async def handle_unblock_command(message: Message):
             UserDB.set_blocked(user_id_to_unblock, False)
             await message.reply(f"Пользователь с ID {user_id_to_unblock} разблокирован.")
         except (IndexError, ValueError):
-            await message.reply("Неверный формат команды. Используйте /unblock <user_id>")
+            await message.reply("Неверный формат команды. Используйте /unblock user_id")
     else:
         await message.reply("У вас нет прав для выполнения этой команды.")

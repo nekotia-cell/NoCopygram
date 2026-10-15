@@ -2,7 +2,8 @@
 
 import asyncio
 import math
-from aiogram.types import Message, CallbackQuery
+from copy import deepcopy
+from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram import F
 from aiogram.utils.markdown import hlink
 from aiogram.enums import ParseMode
@@ -20,6 +21,7 @@ from utils.userhelpers import ensure_user_exists
 # In-memory storage for active roulette games per chat
 game_instances: dict = {}
 game_locks: dict = {}
+last_round_bets: dict = {}
 
 
 def get_game_instance(chat_id: int) -> RouletteGame:
@@ -32,6 +34,49 @@ def get_game_lock(chat_id: int) -> asyncio.Lock:
     if chat_id not in game_locks:
         game_locks[chat_id] = asyncio.Lock()
     return game_locks[chat_id]
+
+
+def roulette_result_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="Удвоить", callback_data="roulette_double", style="primary"),
+        InlineKeyboardButton(text="Повторить", callback_data="roulette_repeat", style="primary"),
+    ]])
+
+
+def save_last_round_bets(chat_id: int, bets: list[dict]) -> None:
+    last_round_bets[chat_id] = {}
+    for bet in bets:
+        last_round_bets[chat_id].setdefault(bet["user_id"], []).append(deepcopy(bet))
+
+
+def place_saved_bets(chat_id: int, user_id: int, double: bool) -> tuple[bool, str]:
+    saved_bets = last_round_bets.get(chat_id, {}).get(user_id)
+    if not saved_bets:
+        return False, "У вас еще не было ставок в рулетке."
+
+    game = get_game_instance(chat_id)
+    prepared_bets = []
+    color_bets = {"red": False, "black": False}
+    for bet in saved_bets:
+        bet_value = bet["bet"]
+        stake = bet["stake"] * (2 if double else 1)
+        if stake <= 0:
+            return False, "Некорректная сумма прошлой ставки."
+        if bet_value in ("red", "black"):
+            if color_bets[bet_value] or not game.can_place_color_bet(user_id, bet_value):
+                return False, "Нельзя повторить ставку на этот цвет в текущем раунде."
+            color_bets[bet_value] = True
+        prepared_bets.append({"user_id": user_id, "stake": stake, "bet": bet_value})
+
+    total = sum(bet["stake"] for bet in prepared_bets)
+    if not UserDB.debit(user_id, total):
+        return False, "Недостаточно Кото-грамм для этой ставки."
+
+    for bet in prepared_bets:
+        game.add_bet(bet["user_id"], bet["stake"], bet["bet"])
+        if bet["bet"] in ("red", "black"):
+            game.set_color_bet(user_id, bet["bet"])
+    return True, f"Ставка принята на {total} Кото-грамм."
 
 
 @dp.message(F.text.lower() == "го")
@@ -52,6 +97,7 @@ async def handle_go_command(message: Message):
             await message.reply("Никто не сделал ставок.")
             return
         bets = game.take_bets()
+        save_last_round_bets(chat_id, bets)
 
     gif_message = await message.answer_animation(ROULETTE_GIF)
     await asyncio.sleep(3)
@@ -115,7 +161,39 @@ async def handle_go_command(message: Message):
         result_message += "\n<blockquote><b>Никто не выиграл!</b></blockquote>"
 
     result_message += "\n" + winning_details
-    await message.answer(result_message, parse_mode=ParseMode.HTML)
+    await message.answer(
+        result_message,
+        parse_mode=ParseMode.HTML,
+        reply_markup=roulette_result_keyboard(),
+    )
+
+
+async def handle_saved_bet_callback(call: CallbackQuery, double: bool):
+    if call.message is None or call.message.chat.type == "private":
+        await call.answer("Эта кнопка доступна только в групповом чате.", show_alert=True)
+        return
+
+    chat_id = call.message.chat.id
+    user_id = call.from_user.id
+    if UserDB.is_blocked(user_id):
+        await call.answer("У вас нет доступа к игре.", show_alert=True)
+        return
+
+    async with get_game_lock(chat_id):
+        success, text = place_saved_bets(chat_id, user_id, double)
+    await call.answer(text, show_alert=not success)
+    if success:
+        await call.message.reply(f"Игрок {user_id}: {text}")
+
+
+@dp.callback_query(F.data == "roulette_double")
+async def handle_roulette_double_callback(call: CallbackQuery):
+    await handle_saved_bet_callback(call, double=True)
+
+
+@dp.callback_query(F.data == "roulette_repeat")
+async def handle_roulette_repeat_callback(call: CallbackQuery):
+    await handle_saved_bet_callback(call, double=False)
 
 
 

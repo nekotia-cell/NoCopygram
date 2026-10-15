@@ -2,6 +2,7 @@
 
 import pytz
 import datetime
+from html import escape
 from aiogram.types import Message
 from aiogram import F
 from aiogram.utils.markdown import hlink
@@ -74,7 +75,7 @@ async def handle_profile(message: Message):
     if user['clan_name']:
         clan_data = ClanDB.get(user['clan_name'])
         if clan_data:
-            clan_info = f"{clan_data['name']}"
+            clan_info = escape(str(clan_data['name']))
 
     profile_info = (
         f"<b>Профиль:</b>\n\n"
@@ -82,7 +83,7 @@ async def handle_profile(message: Message):
         f"<b>👤 Имя:</b> {user_link}\n"
         f"<b>💰 Кото-граммы:</b> <code>{user['balance']}</code>\n"
         f"<b>🛡️ Клан:</b> {clan_info}\n\n"
-        f"<b><blockquote>📅 Дата регистрации: {user['registration_date']}</blockquote></b>"
+        f"<b><blockquote>📅 Дата регистрации: {escape(str(user['registration_date']))}</blockquote></b>"
     )
 
     await message.reply(profile_info, parse_mode=ParseMode.HTML)

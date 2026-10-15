@@ -79,6 +79,6 @@ async def handle_cube_game(message: Message):
 
     except (ValueError, IndexError):
         await message.reply(
-            f"{user_link}, Неверный формат команды. Используйте: кубы <ставка> <число от 1 до 6>.",
+            f"{user_link}, Неверный формат команды. Используйте: кубы ставка число от 1 до 6.",
             parse_mode=ParseMode.HTML
         )

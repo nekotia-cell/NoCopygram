@@ -1,4 +1,5 @@
 import os
+from html import escape
 from aiogram.types import Message, FSInputFile, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -171,7 +172,7 @@ async def process_promo_activations(message: Message, state: FSMContext):
     await state.clear()
     
     await message.answer(
-        f"✅ Промокод создан!\n\n🎫 Код: <code>{code}</code>\n💰 Кото-грамм: {amount}\n🔢 Активаций: {activations}",
+        f"✅ Промокод создан!\n\n🎫 Код: <code>{escape(code)}</code>\n💰 Кото-грамм: {amount}\n🔢 Активаций: {activations}",
         reply_markup=get_promo_keyboard(),
         parse_mode="HTML"
     )
@@ -209,7 +210,7 @@ async def process_delete_promo(message: Message, state: FSMContext):
     # Удаляем по оригинальному коду из БД
     PromoDB.delete(promo['code'])
     await state.clear()
-    await message.answer(f"✅ Промокод <code>{promo['code']}</code> удалён!", reply_markup=get_promo_keyboard(), parse_mode="HTML")
+    await message.answer(f"✅ Промокод <code>{escape(str(promo['code']))}</code> удалён!", reply_markup=get_promo_keyboard(), parse_mode="HTML")
 
 # ============ ИНФОРМАЦИЯ О ПРОМОКОДЕ ============
 
@@ -248,12 +249,12 @@ async def process_promo_info(message: Message, state: FSMContext):
     
     await state.clear()
     await message.answer(
-        f"📊 Информация о промокоде <code>{promo['code']}</code>:\n\n"
+        f"📊 Информация о промокоде <code>{escape(str(promo['code']))}</code>:\n\n"
         f"💰 Кото-грамм за активацию: {promo['koto_grams']}\n"
         f"🔢 Всего активаций: {total}\n"
         f"✅ Активировано: {used_count}\n"
         f"⏳ Осталось: {remaining}\n"
-        f"📅 Создан: {created_at}",
+        f"📅 Создан: {escape(str(created_at))}",
         reply_markup=get_promo_keyboard(),
         parse_mode="HTML"
     )

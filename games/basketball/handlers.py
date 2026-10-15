@@ -100,6 +100,6 @@ async def handle_basketball_game(message: Message):
 
     except (ValueError, IndexError):
         await message.reply(
-            f"{user_link}, Неверный формат команды. Используйте: баскет <ставка>.",
+            f"{user_link}, Неверный формат команды. Используйте: баскет ставка.",
             parse_mode=ParseMode.HTML
         )

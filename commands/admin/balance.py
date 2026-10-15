@@ -18,7 +18,7 @@ async def handle_admin_command(message: Message):
         UserDB.update_balance(reply_to_user_id, amount)
         await message.reply(f"Выдано {amount} Кото-грамм пользователю @{message.reply_to_message.from_user.username}")
     except (IndexError, ValueError):
-        await message.reply("Неверный формат команды. Используйте 'выдать <количество>'")
+        await message.reply("Неверный формат команды. Используйте «выдать количество».")
 
 
 @dp.message(F.reply_to_message & (F.from_user.id == ADMIN_ID) & F.text.lower().startswith("забрать "))
@@ -36,4 +36,4 @@ async def handle_take_command(message: Message):
             await message.reply(f"У пользователя @{message.reply_to_message.from_user.username} недостаточно средств.")
 
     except (IndexError, ValueError):
-        await message.reply("Неверный формат команды. Используйте 'забрать <количество>'")
+        await message.reply("Неверный формат команды. Используйте «забрать количество».")

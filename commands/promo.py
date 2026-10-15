@@ -1,3 +1,4 @@
+from html import escape
 from aiogram.types import Message
 from aiogram import F
 from aiogram.utils.markdown import hlink
@@ -61,7 +62,7 @@ async def handle_promo_text(message: Message):
     
     await message.reply(
         f"✅ {user_link}, промокод активирован!\n\n"
-        f"🎫 Код: <code>{promo['code']}</code>\n"
+        f"🎫 Код: <code>{escape(str(promo['code']))}</code>\n"
         f"💰 Получено: +{promo['koto_grams']} Кото-грамм",
         parse_mode=ParseMode.HTML
     )

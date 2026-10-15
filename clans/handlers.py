@@ -1,4 +1,5 @@
 import re
+from html import escape
 from aiogram.types import Message, CallbackQuery
 from aiogram import F
 from aiogram.utils.markdown import hlink
@@ -51,12 +52,12 @@ async def handle_clan_promote_command(message: Message):
         clan = Clan(clan_name, clan_data['creator_id'], clan_data['creator_first_name'])
         if clan.promote_member(target_user_id):
             new_role = clan.get_member_role(target_user_id)
-            await message.reply(f"{user_link}, Вы повысили пользователя с ID {target_user_id} до {new_role}.", parse_mode=ParseMode.HTML)
+            await message.reply(f"{user_link}, Вы повысили пользователя с ID {target_user_id} до {escape(str(new_role))}.", parse_mode=ParseMode.HTML)
         else:
             await message.reply(f"{user_link}, Не удалось повысить пользователя.", parse_mode=ParseMode.HTML)
 
     except (ValueError, IndexError):
-        await message.reply(f"{user_link}, Неверный формат команды. Используйте 'Клан повысить <user_id>'.", parse_mode=ParseMode.HTML)
+        await message.reply(f"{user_link}, Неверный формат команды. Используйте «Клан повысить user_id».", parse_mode=ParseMode.HTML)
 
 
 @dp.message(F.text.lower().startswith("клан понизить"))
@@ -100,12 +101,12 @@ async def handle_clan_demote_command(message: Message):
         clan = Clan(clan_name, clan_data['creator_id'], clan_data['creator_first_name'])
         if clan.demote_member(target_user_id):
             new_role = clan.get_member_role(target_user_id)
-            await message.reply(f"{user_link}, Вы понизили пользователя с ID {target_user_id} до {new_role}.", parse_mode=ParseMode.HTML)
+            await message.reply(f"{user_link}, Вы понизили пользователя с ID {target_user_id} до {escape(str(new_role))}.", parse_mode=ParseMode.HTML)
         else:
             await message.reply(f"{user_link}, Не удалось понизить пользователя.", parse_mode=ParseMode.HTML)
 
     except (ValueError, IndexError):
-        await message.reply(f"{user_link}, Неверный формат команды. Используйте 'Клан понизить <user_id>'.", parse_mode=ParseMode.HTML)
+        await message.reply(f"{user_link}, Неверный формат команды. Используйте «Клан понизить user_id».", parse_mode=ParseMode.HTML)
 
 
 @dp.message(F.text.lower().in_(["клан топ", "топ клан", "топ кланов", "топ кланы"]))
@@ -126,13 +127,13 @@ async def handle_clan_top_command(message: Message):
 
     top_list = f"<b>{user_link}, Топ 10 кланов:</b>\n"
     for i, clan in enumerate(top_clans):
-        top_list += f"{i+1}. {clan['name']} — {clan['rating']}👑\n—————————————————"
+        top_list += f"{i+1}. {escape(str(clan['name']))} — {clan['rating']}👑\n—————————————————"
 
     user_clan = UserDB.get_clan(user_id)
     if user_clan:
         clan_data = ClanDB.get(user_clan)
         if clan_data:
-            top_list += f"\n{clan_data['name']} — {clan_data['rating']}👑"
+            top_list += f"\n{escape(str(clan_data['name']))} — {clan_data['rating']}👑"
     else:
         top_list += "\nВы не состоите в клане"
 
@@ -251,10 +252,10 @@ async def handle_clan_rename_command(message: Message):
             cursor.execute('UPDATE clan_members SET clan_name = ? WHERE clan_name = ?', (new_clan_name, clan_name))
             cursor.execute('UPDATE users SET clan_name = ? WHERE clan_name = ?', (new_clan_name, clan_name))
 
-        await message.reply(f"{user_link}, Название клана успешно изменено на '{new_clan_name}'.", parse_mode=ParseMode.HTML)
+        await message.reply(f"{user_link}, Название клана успешно изменено на «{escape(new_clan_name)}».", parse_mode=ParseMode.HTML)
 
     except (ValueError, IndexError):
-        await message.reply(f"{user_link}, Неверный формат команды. Используйте 'Клан название <новое название>'.", parse_mode=ParseMode.HTML)
+        await message.reply(f"{user_link}, Неверный формат команды. Используйте «Клан название новое_название».", parse_mode=ParseMode.HTML)
 
 
 @dp.message(F.text.lower() == "клан участники")
@@ -282,7 +283,7 @@ async def handle_clan_members_command(message: Message):
 
     members_list = "<b>Участники клана:</b>\n"
     for member in members:
-        members_list += f"- {member.get('first_name', 'Unknown')} (ID: {member['user_id']}) - {member['role']}\n"
+        members_list += f"- {escape(str(member.get('first_name', 'Unknown')))} (ID: {member['user_id']}) - {escape(str(member['role']))}\n"
 
     await message.reply(members_list, parse_mode=ParseMode.HTML)
 
@@ -328,10 +329,10 @@ async def handle_clan_kick_command(message: Message):
         clan = Clan(clan_name, clan_data['creator_id'], clan_data['creator_first_name'])
         clan.remove_member(kicked_user_id)
 
-        await message.reply(f"{user_link}, Вы исключили пользователя с ID {kicked_user_id} из клана «{clan_name}»", parse_mode=ParseMode.HTML)
+        await message.reply(f"{user_link}, Вы исключили пользователя с ID {kicked_user_id} из клана «{escape(str(clan_name))}»", parse_mode=ParseMode.HTML)
 
     except (ValueError, IndexError):
-        await message.reply(f"{user_link}, Неверный формат команды. Используйте 'Клан кик <user_id>'.", parse_mode=ParseMode.HTML)
+        await message.reply(f"{user_link}, Неверный формат команды. Используйте «Клан кик user_id».", parse_mode=ParseMode.HTML)
 
 
 @dp.message(F.text.lower().startswith("клан пригласить"))
@@ -377,12 +378,12 @@ async def handle_clan_invite_command(message: Message):
             invited_user_link = hlink("Пользователю", f"tg://user?id={invited_user_id}")
             await bot.send_message(
                 invited_user_id,
-                f"{invited_user_link}, Вас пригласили в клан «{clan_name}», Принять приглашение?",
+                f"{invited_user_link}, Вас пригласили в клан «{escape(str(clan_name))}», Принять приглашение?",
                 reply_markup=keyboard,
                 parse_mode=ParseMode.HTML
             )
 
-            await message.reply(f"{user_link}, Вы отправили приглашение пользователю с ID {invited_user_id} в клан «{clan_name}»", parse_mode=ParseMode.HTML)
+            await message.reply(f"{user_link}, Вы отправили приглашение пользователю с ID {invited_user_id} в клан «{escape(str(clan_name))}»", parse_mode=ParseMode.HTML)
 
         except Exception as e:
             await message.reply(
@@ -391,7 +392,7 @@ async def handle_clan_invite_command(message: Message):
             )
 
     except (ValueError, IndexError):
-        await message.reply(f"{user_link}, Неверный формат команды. Используйте 'Клан пригласить <user_id>'.", parse_mode=ParseMode.HTML)
+        await message.reply(f"{user_link}, Неверный формат команды. Используйте «Клан пригласить user_id».", parse_mode=ParseMode.HTML)
 
 
 @dp.callback_query(F.data.startswith('accept_invite'))
@@ -472,12 +473,12 @@ async def handle_create_clan_command(message: Message):
         UserDB.set_clan(user_id, clan_name)
 
         await message.reply(
-            f"{user_link}, Клан «{clan_name}» успешно создан. Списано {CLAN_CREATION_COST} Кото-грамм.",
+            f"{user_link}, Клан «{escape(str(clan_name))}» успешно создан. Списано {CLAN_CREATION_COST} Кото-грамм.",
             parse_mode=ParseMode.HTML
         )
 
     except IndexError:
-        await message.reply(f"{user_link}, Неверный формат команды. Используйте: 'Создать клан <название>'", parse_mode=ParseMode.HTML)
+        await message.reply(f"{user_link}, Неверный формат команды. Используйте: «Создать клан название».", parse_mode=ParseMode.HTML)
 
 
 @dp.message(F.text.lower() == "мой клан")
@@ -500,10 +501,10 @@ async def handle_my_clan_command(message: Message):
 
     member_role = ClanMemberDB.get_role(user_id)
     clan_info = (
-        f"<b>🛡️ Клан:</b> <code>{clan_data['name']}</code>\n\n"
-        f"<b>🧑‍🤝‍🧑 Создатель:</b> {clan_data['creator_first_name']}\n"
+        f"<b>🛡️ Клан:</b> <code>{escape(str(clan_data['name']))}</code>\n\n"
+        f"<b>🧑‍🤝‍🧑 Создатель:</b> {escape(str(clan_data['creator_first_name']))}\n"
         f"<b>👥 Участников:</b> {clan_data['members_count']}\n"
-        f"<b>ℹ️ Ваша роль:</b> {member_role}\n\n"
+        f"<b>ℹ️ Ваша роль:</b> {escape(str(member_role))}\n\n"
         f"<b>👑 Рейтинг:</b> <code>{clan_data['rating']}</code>\n"
         f"<b>💰 Казна:</b> <code>{clan_data['treasury']}</code> Кото-грамм"
     )

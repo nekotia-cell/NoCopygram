@@ -59,7 +59,7 @@ async def handle_crash_command(message: Message):
             return
 
     except ValueError:
-        await message.reply("Неверный формат команды. Используйте «краш <ставка> <множитель>»")
+        await message.reply("Неверный формат команды. Используйте «краш ставка множитель».")
         return
 
     bot_multiplier = get_random_multiplier_with_probabilities(multiplier)

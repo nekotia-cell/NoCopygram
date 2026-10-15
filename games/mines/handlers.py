@@ -56,7 +56,7 @@ async def handle_mines_command(message: Message):
             return
 
     except ValueError:
-        await message.reply("Неверный формат команды. Используйте 'мины <ставка>'")
+        await message.reply("Неверный формат команды. Используйте «мины ставка».")
         return
 
     game = MinesGame(user_id, stake, message.chat.id)
