@@ -5,6 +5,7 @@ import math
 from copy import deepcopy
 from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram import F
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.utils.markdown import hlink
 from aiogram.enums import ParseMode
 
@@ -99,17 +100,20 @@ async def handle_go_command(message: Message):
         bets = game.take_bets()
         save_last_round_bets(chat_id, bets)
 
-    gif_message = await message.answer_animation(ROULETTE_GIF)
-    await asyncio.sleep(3)
-
+    gif_message = None
     try:
-        await bot.delete_message(chat_id, gif_message.message_id)
-    except Exception as e:
-        print(f"Ошибка при удалении гифки: {e}")
-        for bet in bets:
-            UserDB.update_balance(bet['user_id'], bet['stake'])
-        await message.reply("Не удалось удалить гифку. У меня нет прав администратора.")
-        return
+        gif_message = await message.answer_animation(ROULETTE_GIF)
+        await asyncio.sleep(3)
+    except TelegramBadRequest as error:
+        # The file_id may expire or be deleted in Telegram. The game must
+        # continue without an animation instead of losing the detached bets.
+        print(f"Не удалось отправить GIF рулетки, продолжаем без анимации: {error}")
+
+    if gif_message is not None:
+        try:
+            await bot.delete_message(chat_id, gif_message.message_id)
+        except TelegramBadRequest as error:
+            print(f"Не удалось удалить GIF рулетки, продолжаем игру: {error}")
 
     winning_number, winning_color = spin_roulette()
 
