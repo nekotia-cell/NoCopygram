@@ -2,8 +2,9 @@
 
 import asyncio
 import math
+import os
 from copy import deepcopy
-from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, FSInputFile
 from aiogram import F
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.utils.markdown import hlink
@@ -101,13 +102,16 @@ async def handle_go_command(message: Message):
         save_last_round_bets(chat_id, bets)
 
     gif_message = None
-    try:
-        gif_message = await message.answer_animation(ROULETTE_GIF)
-        await asyncio.sleep(3)
-    except TelegramBadRequest as error:
-        # The file_id may expire or be deleted in Telegram. The game must
-        # continue without an animation instead of losing the detached bets.
-        print(f"Не удалось отправить GIF рулетки, продолжаем без анимации: {error}")
+    if os.path.isfile(ROULETTE_GIF):
+        try:
+            gif_message = await message.answer_animation(FSInputFile(ROULETTE_GIF))
+            await asyncio.sleep(3)
+        except (TelegramBadRequest, OSError) as error:
+            # The local asset may be missing or rejected by Telegram. The game
+            # must continue without an animation instead of losing the bets.
+            print(f"Не удалось отправить GIF рулетки, продолжаем без анимации: {error}")
+    else:
+        print(f"Файл GIF рулетки не найден: {ROULETTE_GIF}")
 
     if gif_message is not None:
         try:
