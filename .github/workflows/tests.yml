@@ -2,9 +2,11 @@ name: Tests
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   syntax:
@@ -25,11 +27,4 @@ jobs:
         run: python -m compileall -q .
 
       - name: Check roulette asset path
-        run: python - <<'PY'
-          import os
-          from assets.gifs import ROULETTE_GIF
-          expected = os.path.abspath('roleta.gif.mp4')
-          assert ROULETTE_GIF == expected, (ROULETTE_GIF, expected)
-          print(f'roulette_asset_path={ROULETTE_GIF}')
-          print(f'roulette_asset_exists={os.path.isfile(ROULETTE_GIF)}')
-        PY
+        run: python -c "import os; from assets.gifs import ROULETTE_GIF; expected=os.path.abspath('roleta.gif.mp4'); assert ROULETTE_GIF == expected, (ROULETTE_GIF, expected); print('roulette_asset_path='+ROULETTE_GIF); print('roulette_asset_exists='+str(os.path.isfile(ROULETTE_GIF)))"
