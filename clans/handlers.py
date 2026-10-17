@@ -282,8 +282,10 @@ async def handle_clan_members_command(message: Message):
         return
 
     members_list = "<b>Участники клана:</b>\n"
-    for member in members:
-        members_list += f"- {escape(str(member.get('first_name', 'Unknown')))} (ID: {member['user_id']}) - {escape(str(member['role']))}\n"
+    for position, member in enumerate(members, start=1):
+        member_name = f"{member.get('first_name', 'Unknown')} {member.get('last_name') or ''}".strip()
+        member_link = hlink(member_name, f"tg://user?id={member['user_id']}")
+        members_list += f"{position}. {member_link} (ID: {member['user_id']}) - {escape(str(member['role']))}\n"
 
     await message.reply(members_list, parse_mode=ParseMode.HTML)
 

@@ -269,10 +269,17 @@ class ClanMemberDB:
     def get_members(clan_name: str) -> List[Dict]:
         with get_db() as cursor:
             cursor.execute('''
-                SELECT cm.*, u.first_name 
+                SELECT cm.*, u.first_name, u.last_name
                 FROM clan_members cm
                 JOIN users u ON cm.user_id = u.user_id
                 WHERE cm.clan_name = ?
+                ORDER BY CASE cm.role
+                    WHEN 'глава' THEN 0
+                    WHEN 'заместитель' THEN 1
+                    WHEN 'модератор' THEN 2
+                    WHEN 'участник' THEN 3
+                    ELSE 4
+                END, cm.user_id
             ''', (clan_name,))
             return [dict(row) for row in cursor.fetchall()]
     

@@ -1,3 +1,4 @@
+from html import escape
 from aiogram.types import Message
 from aiogram import F
 from aiogram.utils.markdown import hlink
@@ -21,7 +22,8 @@ async def handle_transfer_command(message: Message):
         return
 
     try:
-        amount = int(message.text.split()[1])
+        parts = message.text.split()
+        amount = int(parts[1])
         sender_id = message.from_user.id
         recipient_id = message.reply_to_message.from_user.id
 
@@ -31,6 +33,10 @@ async def handle_transfer_command(message: Message):
 
         if sender_id == recipient_id:
             await message.reply("Нельзя перевести самому себе.")
+            return
+
+        if message.reply_to_message.from_user.is_bot:
+            await message.reply("Нельзя переводить Кото-граммы Telegram-ботам.")
             return
 
         if UserDB.get(recipient_id) is None:
@@ -51,9 +57,15 @@ async def handle_transfer_command(message: Message):
         )
         declension = gram_declension(amount)
         vip_prefix = get_vip_prefix(user_id)
+        signature = " ".join(parts[2:]).strip()
+        transfer_note = (
+            f"<blockquote><b><i>💬 {escape(signature)}</i></b></blockquote>"
+            if signature
+            else "<blockquote><b><i>BOT IN BETA-TEST</i></b></blockquote>"
+        )
 
         await message.answer(
-            f"{vip_prefix}{sender_link} передал <code>{amount}</code> {declension} пользователю {recipient_link}\n\n<blockquote><b><i>BOT IN BETA-TEST</i></b></blockquote>",
+            f"{vip_prefix}{sender_link} передал <code>{amount}</code> {declension} пользователю {recipient_link}\n\n{transfer_note}",
             parse_mode=ParseMode.HTML
         )
 
