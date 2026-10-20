@@ -12,6 +12,7 @@ from users.vip import get_vip_prefix
 
 from utils.userhelpers import ensure_user_exists
 
+
 @dp.message(F.reply_to_message & F.text.lower().startswith(("п ", "передать ")))
 async def handle_transfer_command(message: Message):
     ensure_user_exists(message)
@@ -41,8 +42,11 @@ async def handle_transfer_command(message: Message):
             return
 
         if UserDB.get(recipient_id) is None:
-            UserDB.create(recipient_id, message.reply_to_message.from_user.first_name, 
-                         message.reply_to_message.from_user.last_name)
+            UserDB.create(
+                recipient_id,
+                message.reply_to_message.from_user.first_name,
+                message.reply_to_message.from_user.last_name,
+            )
 
         if not UserDB.transfer(sender_id, recipient_id, amount):
             await message.reply("У вас недостаточно средств или получатель недоступен.")
@@ -50,11 +54,11 @@ async def handle_transfer_command(message: Message):
 
         sender_link = hlink(
             f"{message.from_user.first_name} {message.from_user.last_name or ''}".strip(),
-            f"tg://user?id={sender_id}"
+            f"tg://user?id={sender_id}",
         )
         recipient_link = hlink(
             f"{message.reply_to_message.from_user.first_name} {message.reply_to_message.from_user.last_name or ''}".strip(),
-            f"tg://user?id={recipient_id}"
+            f"tg://user?id={recipient_id}",
         )
         declension = gram_declension(amount)
         vip_prefix = get_vip_prefix(user_id)
@@ -66,12 +70,14 @@ async def handle_transfer_command(message: Message):
         )
 
         await message.answer(
-            f"{vip_prefix}{sender_link} передал <code>{format_balance(amount)}</code> {declension} пользователю {recipient_link}\n\n{transfer_note}",
-            parse_mode=ParseMode.HTML
+            f"{vip_prefix}{sender_link} передал <code>{format_balance(amount)}</code> "
+            f"{declension} пользователю {recipient_link}\n\n{transfer_note}",
+            parse_mode=ParseMode.HTML,
         )
 
     except (IndexError, ValueError):
         await message.reply(
-            "Неверный формат команды. Используйте «<code>П количество</code>» или «<code>Передать количество</code>»",
-            parse_mode=ParseMode.HTML
+            "Неверный формат команды. Используйте «<code>П количество</code>» "
+            "или «<code>Передать количество</code>»",
+            parse_mode=ParseMode.HTML,
         )
