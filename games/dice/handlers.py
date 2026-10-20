@@ -13,6 +13,7 @@ from database.models import UserDB
 from assets.emojis import WIN_EMOJIS, LOSS_EMOJIS
 
 from utils.userhelpers import ensure_user_exists
+from utils.formatters import format_balance
 
 @dp.message(F.text.lower().startswith("кубы"))
 @antispam
@@ -65,14 +66,14 @@ async def handle_cube_game(message: Message):
             result_message = (
                 f"<b>{user_link}, Поздравляем! {random_win_emoji}</b>\n\n"
                 f"🎲 Выпало: {dice_value}\n"
-                f"✅ Вы выиграли: +{winnings} Кото-грамм!"
+                f"✅ Вы выиграли: +{format_balance(winnings)} Кото-грамм!"
             )
         else:
             random_loss_emoji = random.choice(LOSS_EMOJIS)
             result_message = (
                 f"<b>{user_link}, К сожалению, вы не угадали {random_loss_emoji}</b>\n\n"
                 f"🎲 Выпало: {dice_value}\n"
-                f"❌ Вы проиграли: {stake} Кото-грамм."
+                f"❌ Вы проиграли: {format_balance(stake)} Кото-грамм."
             )
 
         await message.reply(result_message, parse_mode=ParseMode.HTML)

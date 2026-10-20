@@ -7,6 +7,7 @@ from aiogram.enums import ParseMode
 from core.dispatcher import dp
 from database.models import UserDB
 from utils.text import gram_declension
+from utils.formatters import format_balance
 from users.vip import get_vip_prefix
 
 from utils.userhelpers import ensure_user_exists
@@ -65,7 +66,7 @@ async def handle_transfer_command(message: Message):
         )
 
         await message.answer(
-            f"{vip_prefix}{sender_link} передал <code>{amount}</code> {declension} пользователю {recipient_link}\n\n{transfer_note}",
+            f"{vip_prefix}{sender_link} передал <code>{format_balance(amount)}</code> {declension} пользователю {recipient_link}\n\n{transfer_note}",
             parse_mode=ParseMode.HTML
         )
 

@@ -13,6 +13,7 @@ from database.models import UserDB, ClanDB, ClanMemberDB
 from clans.models import Clan
 from clans.manager import get_top_clans
 from config import CLAN_CREATION_COST, CLAN_NAME_MAX_LENGTH, CLAN_MIN_DEPOSIT
+from utils.formatters import format_balance
 
 from utils.userhelpers import ensure_user_exists
 
@@ -133,7 +134,7 @@ async def handle_clan_top_command(message: Message):
     if user_clan:
         clan_data = ClanDB.get(user_clan)
         if clan_data:
-            top_list += f"\n{escape(str(clan_data['name']))} — {clan_data['rating']}👑"
+            top_list += f"\n{escape(str(clan_data['name']))} — {format_balance(clan_data['rating'])}👑"
     else:
         top_list += "\nВы не состоите в клане"
 
@@ -443,7 +444,7 @@ async def handle_create_clan_command(message: Message):
 
     balance = UserDB.get_balance(user_id)
     if balance < CLAN_CREATION_COST:
-        await message.reply(f"{user_link}, Недостаточно Кото-грамм для создания клана. Необходимо {CLAN_CREATION_COST}.", parse_mode=ParseMode.HTML)
+        await message.reply(f"{user_link}, Недостаточно Кото-грамм для создания клана. Необходимо {format_balance(CLAN_CREATION_COST)}.", parse_mode=ParseMode.HTML)
         return
 
     try:
@@ -475,7 +476,7 @@ async def handle_create_clan_command(message: Message):
         UserDB.set_clan(user_id, clan_name)
 
         await message.reply(
-            f"{user_link}, Клан «{escape(str(clan_name))}» успешно создан. Списано {CLAN_CREATION_COST} Кото-грамм.",
+            f"{user_link}, Клан «{escape(str(clan_name))}» успешно создан. Списано {format_balance(CLAN_CREATION_COST)} Кото-грамм.",
             parse_mode=ParseMode.HTML
         )
 
@@ -505,10 +506,10 @@ async def handle_my_clan_command(message: Message):
     clan_info = (
         f"<b>🛡️ Клан:</b> <code>{escape(str(clan_data['name']))}</code>\n\n"
         f"<b>🧑‍🤝‍🧑 Создатель:</b> {escape(str(clan_data['creator_first_name']))}\n"
-        f"<b>👥 Участников:</b> {clan_data['members_count']}\n"
+        f"<b>👥 Участников:</b> {format_balance(clan_data['members_count'])}\n"
         f"<b>ℹ️ Ваша роль:</b> {escape(str(member_role))}\n\n"
-        f"<b>👑 Рейтинг:</b> <code>{clan_data['rating']}</code>\n"
-        f"<b>💰 Казна:</b> <code>{clan_data['treasury']}</code> Кото-грамм"
+        f"<b>👑 Рейтинг:</b> <code>{format_balance(clan_data['rating'])}</code>\n"
+        f"<b>💰 Казна:</b> <code>{format_balance(clan_data['treasury'])}</code> Кото-грамм"
     )
 
     await message.reply(clan_info, parse_mode=ParseMode.HTML)
@@ -532,7 +533,7 @@ async def handle_clan_treasury_command(message: Message):
         amount = int(message.text.split()[2])
 
         if amount < CLAN_MIN_DEPOSIT:
-            await message.reply(f"{user_link}, Минимальная сумма для пополнения казны клана {CLAN_MIN_DEPOSIT} Кото-грамм.", parse_mode=ParseMode.HTML)
+            await message.reply(f"{user_link}, Минимальная сумма для пополнения казны клана {format_balance(CLAN_MIN_DEPOSIT)} Кото-грамм.", parse_mode=ParseMode.HTML)
             return
 
         if amount <= 0:
@@ -550,7 +551,7 @@ async def handle_clan_treasury_command(message: Message):
         ClanDB.update_treasury(clan_name, amount)
 
         await message.reply(
-            f"{user_link}, Вы внесли <code>{amount}</code> Кото-грамм в казну клана",
+            f"{user_link}, Вы внесли <code>{format_balance(amount)}</code> Кото-грамм в казну клана",
             parse_mode=ParseMode.HTML
         )
 

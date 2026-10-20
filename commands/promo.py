@@ -6,6 +6,7 @@ from aiogram.enums import ParseMode
 from core.dispatcher import dp
 from database.models import PromoDB, UserDB
 from core.middlewares.antispam import antispam
+from utils.formatters import format_balance
 
 
 # Используем lambda вместо startswith
@@ -63,6 +64,6 @@ async def handle_promo_text(message: Message):
     await message.reply(
         f"✅ {user_link}, промокод активирован!\n\n"
         f"🎫 Код: <code>{escape(str(promo['code']))}</code>\n"
-        f"💰 Получено: +{promo['koto_grams']} Кото-грамм",
+        f"💰 Получено: +{format_balance(promo['koto_grams'])} Кото-грамм",
         parse_mode=ParseMode.HTML
     )

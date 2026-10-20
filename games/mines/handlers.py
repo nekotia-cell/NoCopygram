@@ -15,6 +15,7 @@ from games.mines.game import MinesGame, MULTIPLIERS
 from games.mines.keyboard import generate_mines_keyboard, add_claim_button
 
 from utils.userhelpers import ensure_user_exists
+from utils.formatters import format_balance
 
 @dp.message(F.text.lower().startswith("мины"))
 @antispam
@@ -65,7 +66,7 @@ async def handle_mines_command(message: Message):
     game_start_message = (
         f"{user_link}, Вы начали игру минное поле!\n"
         "Для начала игры выберите одно из закрытых полей\n"
-        f"Ставка: {stake}\n"
+        f"Ставка: {format_balance(stake)}\n"
         f"Выигрыш: x{MULTIPLIERS[0]}\n\n"
     )
 
@@ -123,7 +124,7 @@ async def handle_mines_callback(call: CallbackQuery):
             updated_message = (
                 "Вы начали игру минное поле!\n"
                 "Для начала игры выберите одно из закрытых полей\n"
-                f"Ставка: {game.stake}\n"
+                f"Ставка: {format_balance(game.stake)}\n"
                 f"Выигрыш: x{new_multiplier}\n\n"
             )
 
@@ -138,7 +139,7 @@ async def handle_mines_callback(call: CallbackQuery):
                 await call.answer("Игра уже завершена другим запросом.")
                 return
 
-            end_message = f"Игра закончена!\nВы выиграли: {winnings} Кото-грамм"
+            end_message = f"Игра закончена!\nВы выиграли: {format_balance(winnings)} Кото-грамм"
             await call.message.edit_text(end_message, reply_markup=None, parse_mode=ParseMode.HTML)
 
 
@@ -167,7 +168,7 @@ async def handle_claim_callback(call: CallbackQuery):
         await call.answer("Игра уже завершена другим запросом.")
         return
 
-    end_message = f"Игра закончена!\nВы выиграли: {winnings} Кото-грамм"
+    end_message = f"Игра закончена!\nВы выиграли: {format_balance(winnings)} Кото-грамм"
     await call.message.edit_text(end_message, reply_markup=None)
 
     await call.answer("Вы забрали выигрыш!")

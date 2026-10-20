@@ -2,6 +2,7 @@ import random
 import time
 from aiogram.types import Message
 from aiogram import F
+from aiogram.filters import CommandStart
 from aiogram.utils.markdown import hlink
 from aiogram.enums import ParseMode
 
@@ -11,6 +12,28 @@ from database.models import UserDB
 from utils.text import gram_declension, time_declension
 from users.vip import is_vip, get_vip_prefix
 from utils.userhelpers import ensure_user_exists
+from utils.formatters import format_balance
+from core.bot import bot
+
+
+def bonus_is_available(user_id: int) -> bool:
+    max_balance_for_bonus = 8000 if is_vip(user_id) else 5000
+    return (
+        UserDB.get_balance(user_id) <= max_balance_for_bonus
+        and time.time() - UserDB.get_bonus_timer(user_id) >= 24 * 3600
+    )
+
+
+async def get_bonus_deep_link() -> str:
+    bot_user = await bot.me()
+    return f"https://t.me/{bot_user.username}?start=bonus"
+
+
+@dp.message(CommandStart(deep_link=True))
+async def handle_bonus_deep_link(message: Message):
+    parts = (message.text or "").split(maxsplit=1)
+    if len(parts) == 2 and parts[1].strip().lower() == "bonus":
+        await handle_bonus_command(message)
 
 @dp.message(F.text.lower() == "бонус")
 @antispam
@@ -33,7 +56,7 @@ async def handle_bonus_command(message: Message):
     balance = UserDB.get_balance(user_id)
     if balance > max_balance_for_bonus:
         await message.reply(
-            f"{vip_prefix}{user_link}, Бонус доступен только при балансе меньше {max_balance_for_bonus}",
+            f"{vip_prefix}{user_link}, Бонус доступен только при балансе меньше {format_balance(max_balance_for_bonus)}",
             parse_mode=ParseMode.HTML
         )
         return
@@ -65,6 +88,6 @@ async def handle_bonus_command(message: Message):
         declension = gram_declension(bonus_amount)
 
         await message.reply(
-            f"🤑 {vip_prefix}{user_link}Поздравляю! Тебе начислено {bonus_amount} {declension}!\n\n<blockquote><b><i>BOT IN BETA-TEST</i></b></blockquote>",
+            f"🤑 {vip_prefix}{user_link}Поздравляю! Тебе начислено {format_balance(bonus_amount)} {declension}!\n\n<blockquote><b><i>BOT IN BETA-TEST</i></b></blockquote>",
             parse_mode=ParseMode.HTML
         )

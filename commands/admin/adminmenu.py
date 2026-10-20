@@ -1,5 +1,6 @@
 import os
 from html import escape
+from utils.formatters import format_balance
 from aiogram.types import Message, FSInputFile, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -140,7 +141,7 @@ async def process_promo_amount(message: Message, state: FSMContext):
     
     await state.update_data(amount=amount)
     await state.set_state(CreatePromoState.waiting_for_activations)
-    await message.answer(f"💰 Сумма: {amount}\n\n🔢 Введите количество активаций:", reply_markup=get_cancel_keyboard())
+    await message.answer(f"💰 Сумма: {format_balance(amount)}\n\n🔢 Введите количество активаций:", reply_markup=get_cancel_keyboard())
 
 
 @dp.message(CreatePromoState.waiting_for_activations)
@@ -172,7 +173,7 @@ async def process_promo_activations(message: Message, state: FSMContext):
     await state.clear()
     
     await message.answer(
-        f"✅ Промокод создан!\n\n🎫 Код: <code>{escape(code)}</code>\n💰 Кото-грамм: {amount}\n🔢 Активаций: {activations}",
+        f"✅ Промокод создан!\n\n🎫 Код: <code>{escape(code)}</code>\n💰 Кото-грамм: {format_balance(amount)}\n🔢 Активаций: {activations}",
         reply_markup=get_promo_keyboard(),
         parse_mode="HTML"
     )
@@ -250,7 +251,7 @@ async def process_promo_info(message: Message, state: FSMContext):
     await state.clear()
     await message.answer(
         f"📊 Информация о промокоде <code>{escape(str(promo['code']))}</code>:\n\n"
-        f"💰 Кото-грамм за активацию: {promo['koto_grams']}\n"
+        f"💰 Кото-грамм за активацию: {format_balance(promo['koto_grams'])}\n"
         f"🔢 Всего активаций: {total}\n"
         f"✅ Активировано: {used_count}\n"
         f"⏳ Осталось: {remaining}\n"

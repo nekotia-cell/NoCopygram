@@ -3,7 +3,7 @@
 import pytz
 import datetime
 from html import escape
-from aiogram.types import Message
+from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram import F
 from aiogram.utils.markdown import hlink
 from aiogram.enums import ParseMode
@@ -15,6 +15,8 @@ from database.models import UserDB, ClanDB, ClanMemberDB
 from users.vip import is_vip, get_vip_prefix, buy_vip, get_vip_time_left
 from utils.text import gram_declension
 from config import TIMEZONE
+from commands.bonus import bonus_is_available, get_bonus_deep_link
+from utils.formatters import format_balance
 
 from utils.userhelpers import ensure_user_exists
 
@@ -81,7 +83,7 @@ async def handle_profile(message: Message):
         f"<b>Профиль:</b>\n\n"
         f"<b>🆔 ID:</b> <code>{user_id}</code>\n"
         f"<b>👤 Имя:</b> {user_link}\n"
-        f"<b>💰 Кото-граммы:</b> <code>{user['balance']}</code>\n"
+        f"<b>💰 Кото-граммы:</b> <code>{format_balance(user['balance'])}</code>\n"
         f"<b>🛡️ Клан:</b> {clan_info}\n\n"
         f"<b><blockquote>📅 Дата регистрации: {escape(str(user['registration_date']))}</blockquote></b>"
     )
@@ -182,8 +184,14 @@ async def handle_gram_message(message: Message):
         f"tg://user?id={user_id}"
     )
     vip_prefix = get_vip_prefix(user_id)
+    reply_markup = None
+    if bonus_is_available(user_id):
+        reply_markup = InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="🎁 Бонус", url=await get_bonus_deep_link())
+        ]])
 
     await message.answer(
-        f"{vip_prefix}{user_link}\n<blockquote>💰 Баланс: <b>{balance}</b> {declension}</blockquote>",
-        parse_mode=ParseMode.HTML
+        f"{vip_prefix}{user_link}\n<blockquote>💰 Баланс: <b>{format_balance(balance)}</b> {declension}</blockquote>",
+        parse_mode=ParseMode.HTML,
+        reply_markup=reply_markup,
     )

@@ -19,6 +19,7 @@ from config import LOG_LENGTH
 from assets.gifs import ROULETTE_GIF
 
 from utils.userhelpers import ensure_user_exists
+from utils.formatters import format_balance
 
 # In-memory storage for active roulette games per chat
 game_instances: dict = {}
@@ -78,7 +79,7 @@ def place_saved_bets(chat_id: int, user_id: int, double: bool) -> tuple[bool, st
         game.add_bet(bet["user_id"], bet["stake"], bet["bet"])
         if bet["bet"] in ("red", "black"):
             game.set_color_bet(user_id, bet["bet"])
-    return True, f"Ставка принята на {total} Кото-грамм."
+    return True, f"Ставка принята на {format_balance(total)} Кото-грамм."
 
 
 @dp.message(F.text.lower() == "го")
@@ -162,7 +163,7 @@ async def handle_go_command(message: Message):
                 bet_desc = '🔴'
             elif bet_value == 'black':
                 bet_desc = '⚫️'
-            winning_details += f"{user_link} выиграл {int(winnings)} Кото-грамм на {bet_desc}\n"
+            winning_details += f"{user_link} выиграл {format_balance(winnings)} Кото-грамм на {bet_desc}\n"
             winners_found = True
 
     if not winners_found:
@@ -243,7 +244,7 @@ async def handle_roulette_bets(message: Message):
             UserDB.update_balance(user_id, total_refund)
 
         await message.reply(
-            f"{user_link}, Ваши ставки отменены.\n\nВозвращено {total_refund} Кото-грамм.",
+            f"{user_link}, Ваши ставки отменены.\n\nВозвращено {format_balance(total_refund)} Кото-грамм.",
             parse_mode=ParseMode.HTML
         )
         return
@@ -303,7 +304,7 @@ async def handle_roulette_bets(message: Message):
                                 bet_description = '🔴'
                             elif bet_value == 'black':
                                 bet_description = '⚫️'
-                            bet_message_lines.append(f"{stake} Кото-грамм на {bet_description}")
+                            bet_message_lines.append(f"{format_balance(stake)} Кото-грамм на {bet_description}")
                         else:
                             bet_message_lines.append("Неверная ставка")
                     else:

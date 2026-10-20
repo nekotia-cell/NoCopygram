@@ -3,6 +3,7 @@ from aiogram import F
 
 from core.dispatcher import dp
 from database.models import UserDB
+from utils.formatters import format_balance
 from config import ADMIN_ID
 
 
@@ -16,7 +17,7 @@ async def handle_admin_command(message: Message):
         reply_to_user_id = message.reply_to_message.from_user.id
 
         UserDB.update_balance(reply_to_user_id, amount)
-        await message.reply(f"Выдано {amount} Кото-грамм пользователю @{message.reply_to_message.from_user.username}")
+        await message.reply(f"Выдано {format_balance(amount)} Кото-грамм пользователю @{message.reply_to_message.from_user.username}")
     except (IndexError, ValueError):
         await message.reply("Неверный формат команды. Используйте «выдать количество».")
 
@@ -31,7 +32,7 @@ async def handle_take_command(message: Message):
         reply_to_user_id = message.reply_to_message.from_user.id
 
         if UserDB.debit(reply_to_user_id, amount):
-            await message.reply(f"Забрано {amount} Кото-грамм у пользователя @{message.reply_to_message.from_user.username}")
+            await message.reply(f"Забрано {format_balance(amount)} Кото-грамм у пользователя @{message.reply_to_message.from_user.username}")
         else:
             await message.reply(f"У пользователя @{message.reply_to_message.from_user.username} недостаточно средств.")
 

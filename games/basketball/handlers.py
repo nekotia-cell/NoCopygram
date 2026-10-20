@@ -13,6 +13,7 @@ from database.models import UserDB
 from assets.emojis import WIN_EMOJIS, LOSS_EMOJIS
 
 from utils.userhelpers import ensure_user_exists
+from utils.formatters import format_balance
 
 @dp.message(F.text.lower().startswith("баскет"))
 @antispam
@@ -57,7 +58,7 @@ async def handle_basketball_game(message: Message):
             loss_emoji = random.choice(LOSS_EMOJIS)
             result_message = (
                 f"<b>К сожелению вы не попали {loss_emoji}</b>\n\n"
-                f"❌ Вы проиграли: {stake} Кото-грамм."
+                f"❌ Вы проиграли: {format_balance(stake)} Кото-грамм."
             )
         elif dice_value == 3:
             win_emoji = random.choice(WIN_EMOJIS)
@@ -65,7 +66,7 @@ async def handle_basketball_game(message: Message):
             UserDB.update_balance(user_id, refund)
             result_message = (
                 f"<b>Оу, Ну это было близко! 😧</b>\n\n"
-                f"{win_emoji} Вам возвращено 50% от ставки: {refund} Кото-грамм"
+                f"{win_emoji} Вам возвращено 50% от ставки: {format_balance(refund)} Кото-грамм"
             )
         elif dice_value == 4:
             winnings = stake * 2
@@ -77,7 +78,7 @@ async def handle_basketball_game(message: Message):
             ]
             result_message = (
                 f"<b>{random.choice(two_pointer_replies)} 🏀</b>\n\n"
-                f"✅ Вы выиграли: +{winnings} Кото-грамм! (ваша ставка * 2)"
+                f"✅ Вы выиграли: +{format_balance(winnings)} Кото-грамм! (ваша ставка * 2)"
             )
         elif dice_value == 5:
             winnings = int(stake * 2.5)
@@ -91,7 +92,7 @@ async def handle_basketball_game(message: Message):
             ]
             result_message = (
                 f"<b>{random.choice(three_pointer_replies)} 🏀</b>\n\n"
-                f"✅ Вы выиграли: +{winnings} Кото-грамм!"
+                f"✅ Вы выиграли: +{format_balance(winnings)} Кото-грамм!"
             )
         else:
             result_message = "Неизвестный результат"

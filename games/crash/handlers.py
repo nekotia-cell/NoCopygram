@@ -13,6 +13,7 @@ from database.models import UserDB
 from games.crash.game import get_random_multiplier_with_probabilities
 
 from utils.userhelpers import ensure_user_exists
+from utils.formatters import format_balance
 
 @dp.message(F.text.lower().startswith("краш"))
 @antispam
@@ -72,8 +73,8 @@ async def handle_crash_command(message: Message):
         payout = math.floor(payout)
         UserDB.update_balance(user_id, payout)
 
-        win_message = f"{user_link}, Игра остановилась на x{bot_multiplier} 📈\n✅ Победа! Ваш приз: +{payout} Кото-грамм"
+        win_message = f"{user_link}, Игра остановилась на x{bot_multiplier} 📈\n✅ Победа! Ваш приз: +{format_balance(payout)} Кото-грамм"
         await bot.send_message(chat_id, win_message, parse_mode=ParseMode.HTML)
     else:
-        loss_message = f"{user_link}, Игра остановилась на x{bot_multiplier} 📈\n❌ Вы проиграли {stake} Кото-грамм"
+        loss_message = f"{user_link}, Игра остановилась на x{bot_multiplier} 📈\n❌ Вы проиграли {format_balance(stake)} Кото-грамм"
         await bot.send_message(chat_id, loss_message, parse_mode=ParseMode.HTML)
