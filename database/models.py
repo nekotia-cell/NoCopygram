@@ -345,12 +345,14 @@ class PromoDB:
     @staticmethod
     def get_by_code_case_insensitive(code: str) -> Optional[Dict]:
         with get_db() as cursor:
-            cursor.execute('SELECT * FROM promo_codes WHERE LOWER(code) = LOWER(?)', (code,))
-            row = cursor.fetchone()
-            if row:
-                data = dict(row)
-                data['used_by'] = json.loads(data['used_by'])
-                return data
+            normalized_code = str(code).strip().lstrip('#').strip().casefold()
+            cursor.execute('SELECT * FROM promo_codes')
+            for row in cursor.fetchall():
+                stored_code = str(row['code']).strip().lstrip('#').strip().casefold()
+                if stored_code == normalized_code:
+                    data = dict(row)
+                    data['used_by'] = json.loads(data['used_by'])
+                    return data
             return None
 
 

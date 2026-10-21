@@ -70,7 +70,7 @@ async def handle_bonus_command(message: Message):
         minutes_declension = time_declension(minutes, "минут")
 
         await message.reply(
-            f"{vip_prefix}{user_link}, Вы сможете получить бонус только через {hours} {hours_declension} и {minutes} {minutes_declension} ⏳\n\n<blockquote><b><i>BOT IN BETA-TEST</i></b></blockquote>",
+            f"{vip_prefix}{user_link}, Вы сможете получить бонус только через {hours} {hours_declension} и {minutes} {minutes_declension} ⏳",
             parse_mode=ParseMode.HTML
         )
     else:
@@ -88,6 +88,6 @@ async def handle_bonus_command(message: Message):
         declension = gram_declension(bonus_amount)
 
         await message.reply(
-            f"🤑 {vip_prefix}{user_link}Поздравляю! Тебе начислено {format_balance(bonus_amount)} {declension}!\n\n<blockquote><b><i>BOT IN BETA-TEST</i></b></blockquote>",
+            f"🤑 {vip_prefix}{user_link}Поздравляю! Тебе начислено {format_balance(bonus_amount)} {declension}!",
             parse_mode=ParseMode.HTML
         )

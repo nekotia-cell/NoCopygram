@@ -100,7 +100,9 @@ async def process_promo_code(message: Message, state: FSMContext):
         await message.answer("❌ Создание отменено", reply_markup=get_promo_keyboard())
         return
     
-    code = message.text.strip().upper()
+    code = message.text.strip()
+    if code.startswith("#"):
+        code = code[1:].strip()
     
     if len(code) < 3:
         await state.clear()

@@ -64,14 +64,14 @@ async def handle_transfer_command(message: Message):
         vip_prefix = get_vip_prefix(user_id)
         signature = " ".join(parts[2:]).strip()
         transfer_note = (
-            f"<blockquote><b><i>💬 {escape(signature)}</i></b></blockquote>"
+            f"\n\n<blockquote><b><i>💬 {escape(signature)}</i></b></blockquote>"
             if signature
-            else "<blockquote><b><i>BOT IN BETA-TEST</i></b></blockquote>"
+            else ""
         )
 
         await message.answer(
             f"{vip_prefix}{sender_link} передал <code>{format_balance(amount)}</code> "
-            f"{declension} пользователю {recipient_link}\n\n{transfer_note}",
+            f"{declension} пользователю {recipient_link}{transfer_note}",
             parse_mode=ParseMode.HTML,
         )
 
